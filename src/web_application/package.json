@@ -4,33 +4,41 @@
     "description": "Desktop application packaging for the Tube Joint Visualizer using Electron.",
     "main": "main.js",
     "scripts": {
-      "start": "electron .",
-      "build:electron": "electron-builder --windows --linux --mac",
-      "postinstall": "electron-builder install-app-deps"
+        "start": "electron .",
+        "build:electron": "electron-builder --windows --linux --mac",
+        "postinstall": "electron-builder install-app-deps"
     },
     "keywords": [
-      "electron",
-      "threejs",
-      "geometry",
-      "desktop"
+        "electron",
+        "threejs",
+        "geometry",
+        "desktop"
     ],
     "author": "Your Name",
     "license": "ISC",
     "dependencies": {
-      "electron-builder": "^24.13.3",
-      "electron": "^30.0.1"
+        "electron-builder": "^24.13.3",
+        "electron": "^30.0.1"
     },
     "devDependencies": {},
     "build": {
-      "appId": "com.yourcompany.tubejointvisualizer",
-      "productName": "Tube Joint Visualizer",
-      "directories": {
-        "output": "dist"
-      },
-      "files": [
-        "main.js",
-        "src/web/**/*",
-        "package.json"
-      ]
-    }
-  }
+        "appId": "com.yourcompany.tubejointvisualizer",
+        "productName": "Tube Joint Visualizer",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "main.js",
+            "src/web/**/*",
+            "package.json"
+        ]
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/hitaansh1519/TubeVisualizer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/hitaansh1519/TubeVisualizer/issues"
+    },
+    "homepage": "https://github.com/hitaansh1519/TubeVisualizer#readme"
+}
