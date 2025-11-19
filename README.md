@@ -32,11 +32,15 @@ Path
 
 Description
 
+
+
 Java Desktop (2D)
 
 src/desktop/TubeJointVisualizer.java
 
 Requires JDK to compile and run.
+
+
 
 Web Visualization (3D)
 
@@ -44,20 +48,29 @@ src/web/index.html
 
 Packaged using Electron for standalone desktop use.
 
-🌐 3D Web Visualization (Development/Testing)
 
-The core 3D visualization is a single-file HTML application.
 
-Usage
+🖼️ Application Gallery
 
-Navigate to the web source directory: cd src/web
+Here are various views of the application interfaces for both the 3D Electron build and the 2D Java build.
 
-Simply open the file in your browser:
+3D Web/Electron Visualization (Initial View)
 
-open index.html # macOS/Linux
-# OR
-start index.html # Windows
+The 3D view shows the control panel (left) and the interactive three-dimensional tubes. This is the output of the packaged Electron app.
 
+!(Screenshot 2025-11-19 171604.png)
+
+2D Java Desktop Visualization (90° Joint)
+
+This view highlights the Java Swing interface, showing the input parameters, the calculated Miter Cut Angle ($\alpha$), and the 2D cross-section for a 90-degree internal joint angle ($\theta$).
+
+!(Screenshot 2025-11-19 155821.png)
+
+2D Java Desktop Visualization (135° Joint)
+
+This demonstrates the output when the internal joint angle ($\theta$) is set to 135 degrees, resulting in a 67.5-degree Miter Cut Angle ($\alpha$).
+
+!(Screenshot 2025-11-19 155842.png)
 
 🖥️ Java Desktop Application: Build and Run Instructions
 
@@ -148,3 +161,10 @@ docs
 Documentation only changes.
 
 docs: finalize README with packaging instructions
+
+<img width="1227" height="860" alt="Screenshot 2025-11-19 155821" src="https://github.com/user-attachments/assets/c877b4f8-8001-469c-81fa-a1f27101bcd1" />
+
+<img width="1226" height="861" alt="Screenshot 2025-11-19 155842" src="https://github.com/user-attachments/assets/27fa9bb3-7708-48c4-8ee3-9bc6070684e6" />
+
+<img width="1220" height="858" alt="Screenshot 2025-11-19 171604" src="https://github.com/user-attachments/assets/9815a81e-3e7f-4441-a898-764b2bb84534" />
+
