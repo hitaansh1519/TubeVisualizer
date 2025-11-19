@@ -1,54 +1,150 @@
-📐 Rectangular Tube Joint Visualizer (Java Desktop)
+📐 Rectangular Tube Joint Visualizer
 
-This project is a single-file Java Swing application designed to visualize and analyze miter joints between rectangular or square tubes.
+This project is an interactive application designed to visualize and analyze miter joints between rectangular or square tubes at various custom angles.
 
-It functions as an interactive desktop tool where users can define tube dimensions and a custom joint angle, with the application calculating the necessary geometric cuts and displaying a 2D cross-section view.
+It provides two distinct implementations:
+
+Web/3D Visualization (Three.js): A single-file web application for interactive 3D inspection, bundled via Electron for desktop use.
+
+Desktop/2D Visualization (Java Swing): A single-file Java application demonstrating geometric calculations and a 2D cross-section view.
 
 🚀 Getting Started
 
 Prerequisites
 
-To run this application, you must have the Java Development Kit (JDK 17+) installed on your system.
+Implementation
 
-Source File
+Requirements
 
-The complete, runnable source code is located in: src/desktop/TubeJointVisualizer.java.
+Web/Electron (3D)
 
-🛠️ Build and Run Instructions
+Node.js (for building the executable) and a Modern Web Browser (for development/testing).
 
-Follow these steps using your computer's Terminal or Command Prompt to compile and execute the application.
+Desktop (Java 2D)
 
-Step 1: Navigate to the Source Directory
+Java Development Kit (JDK 17+) to compile and run the source file.
 
-cd src/desktop
+Source Files
+
+Implementation
+
+Path
+
+Description
+
+Java Desktop (2D)
+
+src/desktop/TubeJointVisualizer.java
+
+Requires JDK to compile and run.
+
+Web Visualization (3D)
+
+src/web/index.html
+
+Packaged using Electron for standalone desktop use.
+
+🌐 3D Web Visualization (Development/Testing)
+
+The core 3D visualization is a single-file HTML application.
+
+Usage
+
+Navigate to the web source directory: cd src/web
+
+Simply open the file in your browser:
+
+open index.html # macOS/Linux
+# OR
+start index.html # Windows
 
 
-Step 2: Compile the Code
+🖥️ Java Desktop Application: Build and Run Instructions
 
-Use the Java compiler (javac) to create the executable class file:
+This application demonstrates the geometric calculation using a 2D cross-section view.
+
+Build and Run Instructions
+
+Navigate to the desktop source directory: cd src/desktop
+
+Compile the Java file:
 
 javac TubeJointVisualizer.java
 
 
-Step 3: Run the Application
-
-Execute the compiled application using the Java Runtime Environment (java):
+Run the application:
 
 java TubeJointVisualizer
 
 
-A new desktop window will open with the control panel and visualization area.
+📦 Electron Packaging Steps (Final Submission)
 
-🎮 Usage and Interaction
+This process bundles the 3D Web Visualization (src/web/index.html) into a single, standalone executable for deployment.
 
-The application is structured into three main areas:
+1. Install Dependencies
 
-Control Panel (Left): Input fields for defining:
+From the root directory of the project (/tube-joint-visualizer), install the required development tools (electron and electron-builder) as defined in package.json:
 
-Tube Dimensions (W, H, T, L): Width, Height, Thickness, and Length.
+npm install
 
-Joint Angle (θ): Set the desired internal angle using the slider or preset buttons (e.g., 90°, 45°).
 
-Visualization Panel (Center): Displays a real-time 2D cross-section of the tube profiles at the joint, illustrating the calculated miter cut angle.
+2. Build the Application
 
-Output Panel (Bottom): Provides technical details, including the calculated Miter Cut Angle ($\alpha$) and current dimensions.
+Use the custom script defined in package.json to start the build process. This will create platform-specific executables (Windows, macOS, Linux).
+
+npm run build:electron
+
+
+3. Locate the Executable File
+
+The electron-builder tool places all output files into the newly created dist directory at the project root.
+
+Operating System
+
+Output File Location Example
+
+Windows
+
+dist/Tube Joint Visualizer Setup 1.0.0.exe
+
+macOS
+
+dist/Tube Joint Visualizer-1.0.0.dmg
+
+Linux
+
+dist/Tube Joint Visualizer-1.0.0.AppImage
+
+📝 Commit Message Guidelines
+
+This project uses Conventional Commits. Please follow this format for clear version history:
+
+Type
+
+Description
+
+Example
+
+feat
+
+A new feature or capability.
+
+feat(electron): add mac build target
+
+fix
+
+A bug fix.
+
+fix(java): correct validation for wall thickness
+
+refactor
+
+Code changes that neither fix a bug nor add a feature (e.g., cleanup).
+
+refactor(web): improve updateJoint calculation logic
+
+docs
+
+Documentation only changes.
+
+docs: finalize README with packaging instructions
