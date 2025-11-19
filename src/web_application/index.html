@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tube Joint Visualizer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Three.js (Core and OrbitControls) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        /* Base styles */
+        body { margin: 0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        canvas { display: block; }
+        #webgl-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* Custom scrollbar for control panel */
+        #controls-panel::-webkit-scrollbar { width: 6px; }
+        #controls-panel::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 3px; }
+        #controls-panel::-webkit-scrollbar-track { background: #1f2937; }
+    </style>
+</head>
+<body>
+
+<div id="webgl-container"></div>
+
+<!-- Control Panel UI -->
+<div id="controls-panel" class="absolute top-4 left-4 p-4 w-72 h-3/4 max-h-[90%] bg-gray-800 bg-opacity-95 text-white rounded-xl shadow-2xl overflow-y-auto z-10">
+    <h1 class="text-xl font-bold mb-4 text-blue-400">Tube Joint Visualizer</h1>
+
+    <!-- TUBE PARAMETERS -->
+    <section class="mb-6 p-3 bg-gray-700 rounded-lg">
+        <h2 class="font-semibold mb-2 border-b border-gray-600 pb-1 text-lg">Tube Parameters (mm)</h2>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label for="width" class="block text-sm font-medium">Width (W)</label>
+                <input type="number" id="width" value="50" min="10" max="200" step="1" class="mt-1 block w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm">
+            </div>
+            <div>
+                <label for="height" class="block text-sm font-medium">Height (H)</label>
+                <input type="number" id="height" value="100" min="10" max="200" step="1" class="mt-1 block w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm">
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label for="thickness" class="block text-sm font-medium">Thickness (T)</label>
+                <input type="number" id="thickness" value="5" min="1" max="20" step="1" class="mt-1 block w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm">
+            </div>
+            <div>
+                <label for="length" class="block text-sm font-medium">Length (L)</label>
+                <input type="number" id="length" value="300" min="50" max="800" step="10" class="mt-1 block w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm">
+            </div>
+        </div>
+        <button id="apply-dims" class="w-full mt-2 py-2 bg-blue-600 hover:bg-blue-700 transition duration-150 rounded-md font-medium shadow-lg">Apply Dimensions</button>
+    </section>
+
+    <!-- JOINT PARAMETERS -->
+    <section class="mb-6 p-3 bg-gray-700 rounded-lg">
+        <h2 class="font-semibold mb-2 border-b border-gray-600 pb-1 text-lg">Joint Angle (Miter)</h2>
+
+        <label for="joint-angle" class="block text-sm font-medium mb-1">Angle: <span id="angle-value" class="font-bold text-blue-300">90°</span></label>
+        <input type="range" id="joint-angle" min="30" max="150" value="90" step="1" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg">
+
+        <div class="grid grid-cols-3 gap-2 mt-3">
+            <button data-angle="45" class="preset-btn py-1.5 bg-gray-900 hover:bg-gray-600 transition duration-150 rounded-md text-sm shadow-md">45°</button>
+            <button data-angle="90" class="preset-btn py-1.5 bg-gray-900 hover:bg-gray-600 transition duration-150 rounded-md text-sm shadow-md">90°</button>
+            <button data-angle="135" class="preset-btn py-1.5 bg-gray-900 hover:bg-gray-600 transition duration-150 rounded-md text-sm shadow-md">135°</button>
+        </div>
+    </section>
+
+    <!-- VISUALIZATION OPTIONS -->
+    <section class="p-3 bg-gray-700 rounded-lg">
+        <h2 class="font-semibold mb-2 border-b border-gray-600 pb-1 text-lg">Visualization</h2>
+
+        <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Wireframe Mode</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="wireframe-toggle" value="" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+        </div>
+    </section>
+
+    <p class="text-xs text-gray-400 mt-4 pt-2 border-t border-gray-700">Use mouse to Pan (Right Click/Two Fingers), Zoom (Scroll Wheel), Rotate (Left Click/One Finger).</p>
+</div>
+
+
+<script type="module">
+    import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+
+    // Global variables for Three.js scene management
+    let scene, camera, renderer, controls;
+    let tubeA, tubeB;
+    const container = document.getElementById('webgl-container');
+
+    // Default parameters
+    let params = {
+        width: 50,
+        height: 100,
+        thickness: 5,
+        length: 300,
+        angle: 90, // Joint angle in degrees
+        wireframe: false
+    };
+
+    // --- 3D UTILITIES ---
+
+    /**
+     * Creates a hollow rectangular tube geometry using BufferGeometry.
+     * @param {number} w - Outer width (X dimension).
+     * @param {number} h - Outer height (Y dimension).
+     * @param {number} t - Wall thickness.
+     * @param {number} l - Length (Z dimension, before rotation).
+     * @returns {THREE.BufferGeometry}
+     */
+    function createHollowTubeGeometry(w, h, t, l) {
+        // Outer dimensions
+        const w_out = w / 2;
+        const h_out = h / 2;
+        const l_half = l / 2;
+        // Inner dimensions
+        const w_in = w_out - t;
+        const h_in = h_out - t;
+
+        // Vertices (Outer 8 + Inner 8 = 16 total vertices)
+        // Order: Front Face (4 outer, 4 inner), Back Face (4 outer, 4 inner)
+        const vertices = new Float32Array([
+            // Front Outer Face (Z = -l_half)
+            -w_out, -h_out, -l_half, w_out, -h_out, -l_half, w_out, h_out, -l_half, -w_out, h_out, -l_half,
+            // Front Inner Face (Z = -l_half)
+            -w_in, -h_in, -l_half, w_in, -h_in, -l_half, w_in, h_in, -l_half, -w_in, h_in, -l_half,
+
+            // Back Outer Face (Z = l_half)
+            -w_out, -h_out, l_half, w_out, -h_out, l_half, w_out, h_out, l_half, -w_out, h_out, l_half,
+            // Back Inner Face (Z = l_half)
+            -w_in, -h_in, l_half, w_in, -h_in, l_half, w_in, h_in, l_half, -w_in, h_in, l_half,
+        ]);
+
+        // Indices to form 12 sides (4 outer walls + 4 inner walls + 2 end caps)
+        const indices = [
+            // Outer Walls (4 sides of the external box)
+            // Bottom
+            0, 1, 9, 0, 9, 8,
+            // Right
+            1, 2, 10, 1, 10, 9,
+            // Top
+            2, 3, 11, 2, 11, 10,
+            // Left
+            3, 0, 8, 3, 8, 11,
+
+            // Inner Walls (4 sides of the internal hole)
+            // Bottom
+            4, 5, 13, 4, 13, 12,
+            // Right
+            5, 6, 14, 5, 14, 13,
+            // Top
+            6, 7, 15, 6, 15, 14,
+            // Left
+            7, 4, 12, 7, 12, 15,
+
+            // Front Cap (4 outer corners, 4 inner corners, forming a square ring)
+            0, 4, 7, 0, 7, 3, // Left
+            3, 7, 6, 3, 6, 2, // Top
+            2, 6, 5, 2, 5, 1, // Right
+            1, 5, 4, 1, 4, 0, // Bottom
+
+            // Back Cap (4 outer corners, 4 inner corners)
+            8, 12, 15, 8, 15, 11, // Left
+            11, 15, 14, 11, 14, 10, // Top
+            10, 14, 13, 10, 13, 9, // Right
+            9, 13, 12, 9, 12, 8, // Bottom
+        ];
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        return geometry;
+    }
+
+    /**
+     * Creates a single tube mesh (with material) and adds it to the scene.
+     * @param {object} p - Dimensions object.
+     * @param {THREE.Color} color - Color for the tube.
+     * @returns {THREE.Mesh}
+     */
+    function createTube(p, color) {
+        const geometry = createHollowTubeGeometry(p.width, p.height, p.thickness, p.length);
+        const material = new THREE.MeshStandardMaterial({
+            color: color,
+            metalness: 0.5,
+            roughness: 0.5,
+            side: THREE.DoubleSide,
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.isTube = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        return mesh;
+    }
+
+    /**
+     * Updates the position and rotation of the tubes to form the miter joint.
+     * @param {number} angle - The desired internal joint angle in degrees.
+     */
+    function updateJoint(angle) {
+        if (!tubeA || !tubeB) return;
+
+        // 1. Reset Tube A (Parent)
+        // Tube A is fixed along the X-axis for simplicity (Horizontal)
+        tubeA.rotation.set(0, 0, 0);
+        tubeA.position.set(-params.length / 2, 0, 0);
+        tubeA.rotateY(Math.PI / 2); // Rotate to align with X-axis
+
+        // 2. Calculate Tube B (Child) geometry
+        const angleRad = (angle * Math.PI) / 180; // The angle of the *joint*
+
+        // The angle Tube B needs to rotate is (180 - angle) / 2
+        // Since Tube A is 90 deg rotated, we adjust.
+        // For 90 deg, Tube B needs 45 deg rotation relative to Z-axis.
+        // For a clean miter (angle), rotation of tube B is (180 - angle) / 2
+        const tubeBRotAngle = Math.PI - angleRad;
+        const tubeBRotation = tubeBRotAngle / 2;
+
+        // Position of the joint center on Tube A is at the end (L/2)
+        const jointCenterA = new THREE.Vector3(params.length / 2, 0, 0);
+
+        // Calculate offset for Tube B to meet Tube A at the center point.
+        // The tube B's pivot is at its center (L/2).
+        // It needs to be moved away from the pivot by L/2 along its local Z-axis.
+        const tubeBOffset = params.length / 2;
+
+        // 3. Apply rotation and position to Tube B
+        // Rotate B by its calculated angle around the Y-axis
+        tubeB.rotation.set(0, 0, 0);
+        tubeB.rotateY(tubeBRotation);
+        tubeB.rotateX(Math.PI / 2); // To align it in the plane
+
+        // The final position of Tube B's center
+        // We calculate the vector from Tube B's pivot (0,0,0) to its end, then move Tube B to match Tube A's joint point.
+        const direction = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), tubeBRotation);
+        const tubeBCenterPosition = direction.multiplyScalar(tubeBOffset);
+
+        // Final position of Tube B: The position of the joint on Tube A, minus the vector to Tube B's center.
+        tubeB.position.copy(jointCenterA).sub(tubeBCenterPosition);
+
+        // Ensure both tubes are grouped and centered in the scene (by positioning Tube A relative to its new end)
+        tubeA.position.copy(tubeA.position).add(new THREE.Vector3(tubeBOffset, 0, 0));
+        tubeB.position.copy(tubeB.position).add(new THREE.Vector3(tubeBOffset, 0, 0));
+
+        // The intersection point should be the origin of the joint coordinate system, so we reset positions to be relative to (0,0,0)
+        tubeA.position.set(-params.length / 2, 0, 0);
+        tubeB.position.set(0, 0, 0);
+
+        // Recalculate based on a fixed joint center at (0, 0, 0)
+        // Tube A starts at (-L/2, 0, 0) and extends to (0, 0, 0)
+        tubeA.rotation.set(0, Math.PI / 2, 0);
+        tubeA.position.set(-params.length / 2, 0, 0);
+
+        // Tube B center position vector
+        const rotationY = Math.PI - tubeBRotation; // Total rotation from Z-axis: 180 - (180 - A) / 2
+        const rotationZ = -rotationY + Math.PI / 2; // Adjust for the initial rotation of tube A
+
+        // Tube B is centered at (0, 0, 0) and we rotate it.
+        tubeB.rotation.set(0, rotationY, 0);
+        tubeB.position.set(0, 0, 0);
+
+        // Calculate the vector from the joint point (0,0,0) to the center of Tube B
+        const dir = new THREE.Vector3(1, 0, 0).applyEuler(tubeB.rotation);
+        tubeB.position.add(dir.multiplyScalar(params.length / 2));
+    }
+
+
+    /**
+     * Initializes the Three.js scene, camera, and controls.
+     */
+    function init() {
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111827); // Tailwind gray-900 equivalent
+
+        // Camera setup
+        camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 1, 5000);
+        camera.position.set(100, 100, 600);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer setup
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // Orbit Controls (Zoom, Pan, Rotate)
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 100;
+        controls.maxDistance = 1500;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 5); // soft white light
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
+        directionalLight.position.set(300, 400, 500);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Grid Helper
+        const gridHelper = new THREE.GridHelper(1000, 20, 0x4b5563, 0x374151);
+        gridHelper.position.y = -50;
+        scene.add(gridHelper);
+
+        // Initial Tubes
+        tubeA = createTube(params, new THREE.Color(0x34d399)); // Emerald Green
+        tubeB = createTube(params, new THREE.Color(0xfb923c)); // Orange
+
+        // Initial joint update
+        updateJoint(params.angle);
+
+        // Event listeners
+        window.addEventListener('resize', onWindowResize, false);
+        setupUIListeners();
+
+        // Start animation loop
+        animate();
+    }
+
+    /**
+     * Handles window resize events.
+     */
+    function onWindowResize() {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    /**
+     * Main animation loop.
+     */
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    /**
+     * Applies the current dimensions to the tubes and regenerates geometry.
+     */
+    function applyDimensions() {
+        const newWidth = parseInt(document.getElementById('width').value);
+        const newHeight = parseInt(document.getElementById('height').value);
+        const newThickness = parseInt(document.getElementById('thickness').value);
+        const newLength = parseInt(document.getElementById('length').value);
+
+        if (newThickness * 2 >= Math.min(newWidth, newHeight)) {
+            console.error("Thickness is too large. Must be less than half of the minimum dimension (W or H).");
+            alert("Error: Thickness is too large! Wall thickness must be less than half of the minimum dimension (Width or Height) to form a hollow tube.");
+            return;
+        }
+
+        params.width = newWidth;
+        params.height = newHeight;
+        params.thickness = newThickness;
+        params.length = newLength;
+
+        // Dispose old geometry
+        tubeA.geometry.dispose();
+        tubeB.geometry.dispose();
+
+        // Create new geometry
+        tubeA.geometry = createHollowTubeGeometry(params.width, params.height, params.thickness, params.length);
+        tubeB.geometry = createHollowTubeGeometry(params.width, params.height, params.thickness, params.length);
+        
+        // Re-run joint update with new length/dimensions
+        updateJoint(params.angle);
+    }
+
+    /**
+     * Sets up event listeners for the HTML controls panel.
+     */
+    function setupUIListeners() {
+        const angleSlider = document.getElementById('joint-angle');
+        const angleValueSpan = document.getElementById('angle-value');
+        const applyDimsBtn = document.getElementById('apply-dims');
+        const wireframeToggle = document.getElementById('wireframe-toggle');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        // Angle Slider
+        angleSlider.addEventListener('input', (e) => {
+            const angle = parseInt(e.target.value);
+            params.angle = angle;
+            angleValueSpan.textContent = `${angle}°`;
+            updateJoint(angle);
+        });
+        
+        // Apply Dimensions Button
+        applyDimsBtn.addEventListener('click', applyDimensions);
+
+        // Preset Buttons
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const angle = parseInt(e.target.dataset.angle);
+                angleSlider.value = angle;
+                params.angle = angle;
+                angleValueSpan.textContent = `${angle}°`;
+                updateJoint(angle);
+            });
+        });
+
+        // Wireframe Toggle
+        wireframeToggle.addEventListener('change', (e) => {
+            params.wireframe = e.target.checked;
+            tubeA.material.wireframe = params.wireframe;
+            tubeB.material.wireframe = params.wireframe;
+        });
+    }
+
+    // Initialize the application when the script runs
+    init();
+
+</script>
+
+</body>
+</html>
