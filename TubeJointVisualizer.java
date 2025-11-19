@@ -1,7 +1,12 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Path2D;
 import java.text.DecimalFormat;
 
@@ -11,9 +16,12 @@ import java.text.DecimalFormat;
  */
 public class TubeJointVisualizer extends JFrame {
 
+    private static final double STEEL_DENSITY_G_PER_MM3 = 0.00785;
+
     private final TubeParameters params;
     private final VisualizationPanel visualizationPanel;
     private final JTextArea outputArea = new JTextArea(4, 20);
+    private final JLabel statusLabel = new JLabel("Hover over the visualization to see coordinates.");
 
     // Data structure to hold all tube parameters
     private static class TubeParameters {
@@ -32,7 +40,7 @@ public class TubeJointVisualizer extends JFrame {
         setLayout(new BorderLayout());
 
         // --- 2. Create UI Components ---
-        visualizationPanel = new VisualizationPanel();
+        visualizationPanel = new VisualizationPanel(statusLabel);
         JPanel controlPanel = createControlPanel();
         JPanel outputPanel = createOutputPanel();
 
@@ -154,7 +162,18 @@ public class TubeJointVisualizer extends JFrame {
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99))); // Gray-500
+        JButton copyButton = new JButton("Copy Analysis");
+        copyButton.setToolTipText("Copy the output text to your clipboard.");
+        copyButton.addActionListener(e -> copyOutputToClipboard());
+
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
+        statusLabel.setForeground(new Color(191, 219, 254));
+        footer.add(copyButton, BorderLayout.WEST);
+        footer.add(statusLabel, BorderLayout.CENTER);
+
         panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(footer, BorderLayout.SOUTH);
         return panel;
     }
 
@@ -223,14 +242,36 @@ public class TubeJointVisualizer extends JFrame {
         // Calculate the cut angle
         double cutAngle = params.jointAngle / 2.0;
 
+        double crossSectionArea = computeCrossSectionArea(params);
+        double weightPerMeterGrams = crossSectionArea * STEEL_DENSITY_G_PER_MM3 * 1000; // length = 1000mm
+        double weightPerMeterKg = weightPerMeterGrams / 1000.0;
+
         String output = "--- Joint Geometry Analysis ---\n";
         output += "Internal Joint Angle (θ): " + df.format(params.jointAngle) + "°\n";
         output += "Miter Cut Angle (α): " + df.format(cutAngle) + "° (relative to face)\n";
         output += "Tube Cross-Section: " + df.format(params.width) + "W x " + df.format(params.height) + "H\n";
         output += "Wall Thickness: " + df.format(params.thickness) + "T\n";
-        output += "Overall Length (L): " + df.format(params.length) + " mm (Note: Only cut face shown in 2D view)";
+        output += "Overall Length (L): " + df.format(params.length) + " mm (Note: Only cut face shown in 2D view)\n\n";
+        output += "--- Material Estimate (Steel) ---\n";
+        output += "Net Cross-Sectional Area: " + df.format(crossSectionArea) + " mm²\n";
+        output += "Approx. Weight per Meter: " + df.format(weightPerMeterKg) + " kg";
         
         outputArea.setText(output);
+    }
+
+    private void copyOutputToClipboard() {
+        StringSelection selection = new StringSelection(outputArea.getText());
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(selection, selection);
+        statusLabel.setText("Analysis copied to clipboard.");
+    }
+
+    private double computeCrossSectionArea(TubeParameters p) {
+        double outerArea = p.width * p.height;
+        double innerWidth = Math.max(0, p.width - 2 * p.thickness);
+        double innerHeight = Math.max(0, p.height - 2 * p.thickness);
+        double innerArea = innerWidth * innerHeight;
+        return Math.max(0, outerArea - innerArea);
     }
 
     /**
@@ -238,8 +279,10 @@ public class TubeJointVisualizer extends JFrame {
      */
     private static class VisualizationPanel extends JPanel {
         private TubeParameters currentParams;
+        private final JLabel statusLabel;
 
-        public VisualizationPanel() {
+        public VisualizationPanel(JLabel statusLabel) {
+            this.statusLabel = statusLabel;
             setBackground(new Color(17, 24, 39)); // Gray-900 background
             // Placeholder label for 3D description
             JLabel info = new JLabel("2D Cross-Section View (Simulates 3D Joint Cut)", SwingConstants.CENTER);
@@ -247,6 +290,20 @@ public class TubeJointVisualizer extends JFrame {
             info.setForeground(new Color(107, 114, 128)); // Gray-400
             setLayout(new BorderLayout());
             add(info, BorderLayout.NORTH);
+
+            addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(MouseEvent e) {
+                    statusLabel.setText("Mouse: (" + e.getX() + ", " + e.getY() + ")");
+                }
+            });
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    statusLabel.setText("Hover over the visualization to see coordinates.");
+                }
+            });
         }
 
         public void setParameters(TubeParameters params) {
